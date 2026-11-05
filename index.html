@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Zimo iOS - Painel Original</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/all.min.css">
+<style>
+  :root { 
+    --bg: #000000; 
+    --card: rgba(5, 5, 5, 0.95); 
+    --accent: #6366f1;   
+    --green: #10b981;    
+    --red: #ef4444;      
+    --text-main: #f3f4f6;
+    --text-muted: #9ca3af;
+  }
+  
+  body { background: var(--bg); color: var(--text-main); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; margin: 0; display: flex; align-items: center; justify-content: center; height: 100vh; width: 100vw; overflow: hidden; }
+  canvas { position: fixed; top: 0; left: 0; width: 100vw !important; height: 100vh !important; z-index: 1; opacity: 0.4; }
+  
+  /* Tamanho exato original do container */
+  .container { width: 325px; background: var(--card); border-radius: 24px; padding: 35px 24px 28px 24px; border: 1px solid rgba(255, 255, 255, 0.08); z-index: 10; position: relative; backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); text-align: center; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.9), inset 0 1px 0 rgba(255,255,255,0.05); box-sizing: border-box; }
+  
+  .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.2); border-top-color: #ffffff; border-radius: 50%; animation: spin 0.8s linear infinite; margin-right: 10px; vertical-align: middle; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  
+  .server-status { font-size: 8px; font-weight: 800; display: flex; align-items: center; gap: 6px; text-transform: uppercase; letter-spacing: 1.2px; transition: 0.3s; }
+  #statusHeader { position: absolute; top: 18px; left: 20px; margin-bottom: 0; }
+  #mainHeader { justify-content: flex-start; margin-bottom: 14px; font-size: 9px; }
+  
+  .dot { width: 6px; height: 6px; border-radius: 50%; transition: 0.3s; animation: pulseGlow 1.2s ease-in-out infinite alternate; }
+  
+  .on { color: var(--green) !important; }
+  .on .dot { background: #10b981 !important; box-shadow: 0 0 6px #10b981, 0 0 12px #10b981, 0 0 18px #10b981 !important; }
+  .off { color: var(--red) !important; }
+  .off .dot { background: var(--red) !important; box-shadow: 0 0 8px var(--red) !important; }
+
+  @keyframes pulseGlow { 
+    0% { opacity: 0.3; transform: scale(0.85); box-shadow: 0 0 4px #10b981; } 
+    100% { opacity: 1; transform: scale(1.25); box-shadow: 0 0 8px #10b981, 0 0 16px #10b981, 0 0 24px #10b981; } 
+  }
+
+  .lock-icon { font-size: 36px; color: rgba(255,255,255,0.9); margin-top: 10px; margin-bottom: 16px; }
+  
+  input { width: 100%; background: rgba(0, 0, 0, 0.5); border: 1px solid rgba(255, 255, 255, 0.08); padding: 15px; border-radius: 14px; color: #fff; text-align: center; margin-bottom: 18px; outline: none; font-size: 13px; font-weight: 600; transition: 0.2s; box-shadow: inset 0 2px 4px rgba(0,0,0,0.4); box-sizing: border-box; }
+  
+  .btn-action { background: #161618; color: #ffffff; border: 1px solid rgba(255, 255, 255, 0.1); width: 100%; padding: 16px; border-radius: 14px; font-weight: 700; cursor: pointer; font-size: 13px; letter-spacing: 0.5px; text-transform: uppercase; transition: 0.2s ease; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5); box-sizing: border-box; }
+  .btn-action:active { background: #222225; transform: scale(0.98); }
+
+  #main-panel { display: none; }
+  
+  .expire-badge { 
+    position: absolute; 
+    top: 14px; 
+    right: 18px; 
+    background: rgba(10, 10, 12, 0.9); 
+    border: 1px solid rgba(255, 255, 255, 0.12); 
+    padding: 5px 10px; 
+    border-radius: 20px; 
+    font-size: 9px; 
+    color: var(--text-muted); 
+    font-weight: 700; 
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    letter-spacing: 0.4px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.05);
+  }
+  
+  .expire-badge i { font-size: 8px; color: #6366f1; }
+  
+  #timeLeft { 
+    color: #ffffff; 
+    font-family: SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-weight: 700; 
+    letter-spacing: 0.5px;
+  }
+
+  .panel-brand { margin: 10px 0 16px 0; }
+  .panel-brand h2 { margin: 0; font-size: 20px; font-weight: 700; letter-spacing: -0.3px; color: #ffffff; }
+  .panel-brand p { font-size: 9px; color: var(--text-muted); margin: 2px 0 0 0; font-weight: 600; letter-spacing: 0.5px; }
+
+  .tabs { display: flex; background: rgba(0, 0, 0, 0.4); padding: 4px; border-radius: 12px; margin-bottom: 20px; border: 1px solid rgba(255,255,255,0.03); }
+  .tab-btn { flex: 1; padding: 10px 0; border: none; background: transparent; color: var(--text-muted); border-radius: 8px; font-weight: 700; font-size: 11px; cursor: pointer; letter-spacing: 0.5px; transition: 0.2s; }
+  .tab-btn.active { background: rgba(255, 255, 255, 0.08); color: var(--text-main); box-shadow: 0 2px 6px rgba(0,0,0,0.15); }
+  
+  .tab-content { display: none; height: 215px; overflow-y: auto; text-align: left; padding-right: 2px; }
+  .tab-content.active { display: block; }
+  
+  .opt-item { background: rgba(255, 255, 255, 0.02); border-radius: 14px; padding: 14px 16px; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; border: 1px solid rgba(255,255,255,0.04); cursor: pointer; transition: 0.2s ease; }
+  
+  .switch-bg { width: 36px; height: 20px; background: rgba(255,255,255,0.06); border-radius: 10px; position: relative; transition: 0.2s; border: 1px solid rgba(255, 255, 255, 0.05); }
+  .switch-bg::after { content: ''; position: absolute; width: 14px; height: 14px; background: #8e8e93; border-radius: 50%; top: 2px; left: 2px; transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1); }
+  
+  .opt-item.active { border-color: rgba(255, 255, 255, 0.12); background: rgba(255, 255, 255, 0.03); }
+  .opt-item.active .switch-bg { background: #1e1e24; border-color: rgba(255, 255, 255, 0.15); box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.7); }
+  .opt-item.active .switch-bg::after { left: 18px; background: #ffffff; box-shadow: 0 2px 4px rgba(0,0,0,0.4); }
+
+  .info-list { display: flex; flex-direction: column; gap: 8px; }
+  .info-row { display: flex; justify-content: space-between; align-items: center; background: rgba(0, 0, 0, 0.3); padding: 12px 14px; border-radius: 10px; font-size: 11px; font-weight: 600; }
+  
+  .version-badge {
+    background: linear-gradient(135deg, #1f1f23 0%, #141416 100%);
+    color: #ffffff;
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-size: 10px;
+    font-weight: 700;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    letter-spacing: 0.5px;
+  }
+
+  #status-toast { 
+    position: fixed; 
+    top: 6%; 
+    left: 50%; 
+    transform: translateX(-50%); 
+    background: #000000; 
+    color: #ffffff; 
+    padding: 13px 26px; 
+    border-radius: 50px; 
+    font-size: 11px; 
+    font-weight: 700; 
+    z-index: 100; 
+    display: none; 
+    text-align: center; 
+    min-width: 200px; 
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    box-shadow: 0 16px 35px rgba(0, 0, 0, 0.95);
+    letter-spacing: 0.4px;
+  }
+</style>
+</head>
+<body>
+<canvas id="particles"></canvas>
+<div id="status-toast"></div>
+<div class="container">
+  <div id="lock-screen">
+    <div id="statusHeader" class="server-status on"><div class="dot"></div> <span id="statusTxt">ONLINE</span></div>
+    
+    <div class="lock-icon"><i class="fas fa-shield-halved"></i></div>
+    <h2 style="margin:0 0 4px 0; font-size:22px; font-weight:700; letter-spacing: -0.3px;">Zimo iOS</h2>
+    <p style="font-size: 10px; color: var(--text-muted); margin-bottom: 24px; font-weight: 600; letter-spacing: 0.5px;">SISTEMA PREMIUM</p>
+    <input type="text" id="keyInput" placeholder="Insira sua chave de acesso">
+    <button class="btn-action" id="btnEntrar" onclick="autenticarKey()">Acessar Painel</button>
+  </div>
+
+  <div id="main-panel">
+    <div id="mainHeader" class="server-status on"><div class="dot"></div> SYSTEM ONLINE</div>
+    
+    <div class="expire-badge"><i class="fas fa-clock"></i> <span id="timeLeft">--</span></div>
+    
+    <div class="panel-brand">
+      <h2>Zimo iOS</h2>
+      <p>SISTEMA PREMIUM</p>
+    </div>
+    
+    <div class="tabs">
+      <div class="tab-btn active" id="btn-funcoes" onclick="showTab('funcoes')">FUNÇÕES</div>
+      <div class="tab-btn" id="btn-info" onclick="showTab('info')">INFORMAÇÕES</div>
+    </div>
+
+    <div id="funcoes" class="tab-content active">
+      <div class="opt-item" onclick="toggleOption(this, 'HEADTRICK 97% HS', 'Ativando Headtrick 97% HS...', 'Removendo Headtrick 97% HS...')">
+        <div style="text-align:left;"><span style="font-weight: 700; font-size: 12px; display:block; margin-bottom: 2px;">HEADTRICK 97% HS</span><span style="font-size:10px; color:var(--text-muted);">Precisão de hardware aprimorada</span></div>
+        <div class="switch-bg"></div>
+      </div>
+      
+      <div class="opt-item" onclick="toggleOption(this, 'PRECISION', 'Ativando Precision...', 'Removendo Precision...')">
+        <div style="text-align:left;"><span style="font-weight: 700; font-size: 12px; display:block; margin-bottom: 2px;">PRECISION</span><span style="font-size:10px; color:var(--text-muted);">Calibração fina de mira e rastreio</span></div>
+        <div class="switch-bg"></div>
+      </div>
+
+      <div class="opt-item" onclick="toggleOption(this, 'RECOIL CONTROL', 'Ativando Recoil Control...', 'Removendo Recoil Control...')">
+        <div style="text-align:left;"><span style="font-weight: 700; font-size: 12px; display:block; margin-bottom: 2px;">RECOIL CONTROL</span><span style="font-size:10px; color:var(--text-muted);">Controle de recuo e trava na altura</span></div>
+        <div class="switch-bg"></div>
+      </div>
+    </div>
+
+    <div id="info" class="tab-content">
+      <div class="info-list">
+        <div class="info-row"><span>Status de Conexão:</span><span id="infoStatus" style="color:var(--green); font-weight:700;">ONLINE</span></div>
+        <div class="info-row"><span>Versão Core:</span><span class="version-badge">v3.0 Ultra Dynamic</span></div>
+        <div class="info-row"><span>Arquitetura local:</span><span>ARM64 Architecture</span></div>
+        <div class="info-row"><span>Renderizador:</span><span>WebGL Framework</span></div>
+      </div>
+    </div>
+    
+    <button class="btn-action" style="margin-top:15px;" id="btnInjetarGeral" onclick="injetarComEfeito()">Injetar Agora</button>
+  </div>
+</div>
+
+<script>
+  let DEVICE_ID = localStorage.getItem("zimo_device_hwid_v1");
+  if (!DEVICE_ID) {
+    DEVICE_ID = 'web_' + Math.random().toString(36).substring(2) + Date.now().toString(36);
+    localStorage.setItem("zimo_device_hwid_v1", DEVICE_ID);
+  }
+
+  const BASE_URL = "https://traxyvendas-726d2-default-rtdb.firebaseio.com";
+  let serverOnline = true;
+  let expireTime = 0;
+  let toastTimeout = null;
+  let chaveAtualAutenticada = "";
+  let loopCronometro = null;
+  let loopHeartbeat = null;
+  let isProcessingOption = false;
+
+  async function enviarSinalDeVida() {
+    if (!chaveAtualAutenticada) return;
+    let agora = Math.floor(Date.now() / 1000);
+    try {
+      await fetch(`${BASE_URL}/keys/${chaveAtualAutenticada}.json`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ visto_por_ultimo: agora })
+      });
+    } catch(e) {}
+  }
+
+  async function checkSystem() {
+    try {
+      const res = await fetch(`${BASE_URL}/config/status.json`);
+      const textoBruto = await res.text();
+      const status = textoBruto.replace(/[^a-z]/gi, '').trim();
+      
+      const header = document.getElementById('statusHeader');
+      const mainHeader = document.getElementById('mainHeader');
+      const txt = document.getElementById('statusTxt');
+      const infoStatus = document.getElementById('infoStatus');
+      
+      if (status === "off") {
+        serverOnline = false;
+        if(header) { header.className = "server-status off"; if(txt) txt.innerText = "MANUTENÇÃO"; }
+        if(mainHeader) { mainHeader.className = "server-status off"; mainHeader.innerHTML = '<div class="dot"></div> MANUTENÇÃO'; }
+        if(infoStatus) { infoStatus.innerText = "OFFLINE"; infoStatus.style.setProperty('color', 'var(--red)', 'important'); }
+      } else {
+        serverOnline = true;
+        if(header) { header.className = "server-status on"; if(txt) txt.innerText = "ONLINE"; }
+        if(mainHeader) { mainHeader.className = "server-status on"; mainHeader.innerHTML = '<div class="dot"></div> SYSTEM ONLINE'; }
+        if(infoStatus) { infoStatus.innerText = "ONLINE"; infoStatus.style.setProperty('color', 'var(--green)', 'important'); }
+      }
+    } catch(e) { }
+  }
+  
+  checkSystem();
+  setInterval(checkSystem, 3000);
+
+  async function autenticarKey() {
+    await checkSystem();
+    if (!serverOnline) { showToast("⚠️ Servidor indisponível em manutenção"); return; }
+    
+    const key = document.getElementById('keyInput').value.trim();
+    if(!key) { showToast("Insira uma chave válida"); return; }
+
+    document.getElementById('btnEntrar').innerHTML = '<div class="spinner"></div> Autenticando...';
+    try {
+      const res = await fetch(`${BASE_URL}/keys/${key}.json`);
+      const data = await res.json();
+      
+      if (data) {
+        chaveAtualAutenticada = key;
+        let now = Math.floor(Date.now() / 1000);
+
+        if (data.hwid && data.hwid !== DEVICE_ID) {
+          showToast("❌ Chave vinculada a outro dispositivo!");
+          document.getElementById('btnEntrar').innerText = "Acessar Painel";
+          return;
+        }
+
+        if (data.status === "expirada" || (data.status === "logada" && data.expire_at && now >= data.expire_at)) {
+          marcarChaveComoExpirada(key);
+          showToast("⏳ Sua chave de acesso expirou!");
+          document.getElementById('btnEntrar').innerText = "Acessar Painel";
+          return;
+        }
+
+        if (data.status !== "ativa" && data.status !== "logada") {
+          showToast("⚠️ Chave desativada ou bloqueada pelo administrador");
+          document.getElementById('btnEntrar').innerText = "Acessar Painel";
+          return;
+        }
+
+        if (data.tempo >= 3110400000) {
+          expireTime = now + 3110400000;
+        } 
+        else if (data.status === "ativa" || (data.tempo && data.tempo > 0)) {
+          let tempoAdicional = parseInt(data.tempo || 0);
+          
+          if (data.status === "logada" && data.expire_at && data.expire_at > now) {
+            expireTime = data.expire_at + tempoAdicional;
+          } else {
+            expireTime = now + tempoAdicional;
+          }
+          
+          await fetch(`${BASE_URL}/keys/${key}.json`, { 
+            method: 'PATCH', 
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+              status: "logada", 
+              tempo: 0, 
+              expire_at: expireTime,
+              hwid: DEVICE_ID,
+              visto_por_ultimo: now
+            }) 
+          });
+        } else { 
+          expireTime = data.expire_at; 
+        }
+
+        if (!expireTime || expireTime <= now) {
+          marcarChaveComoExpirada(key);
+          showToast("⚠️ Chave sem tempo válido");
+          document.getElementById('btnEntrar').innerText = "Acessar Painel";
+          return;
+        }
+
+        document.getElementById('lock-screen').style.display = 'none';
+        document.getElementById('main-panel').style.display = 'block';
+        
+        if(loopCronometro) clearInterval(loopCronometro);
+        loopCronometro = setInterval(updateTimer, 1000);
+
+        enviarSinalDeVida();
+        if(loopHeartbeat) clearInterval(loopHeartbeat);
+        loopHeartbeat = setInterval(enviarSinalDeVida, 10000);
+
+        showToast("Autenticação realizada com sucesso");
+      } else { 
+        showToast("Chave de acesso inválida"); 
+        document.getElementById('btnEntrar').innerText = "Acessar Painel";
+      }
+    } catch (e) { 
+      showToast("Falha na comunicação"); 
+      document.getElementById('btnEntrar').innerText = "Acessar Painel";
+    }
+  }
+
+  async function marcarChaveComoExpirada(key) {
+    try {
+      await fetch(`${BASE_URL}/keys/${key}.json`, { 
+        method: 'PATCH', 
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: "expirada", expire_at: 0, tempo: 0 }) 
+      });
+    } catch(e) {}
+  }
+
+  function updateTimer() {
+    let now = Math.floor(Date.now() / 1000);
+    let rem = expireTime - now;
+    
+    if (rem <= 0) {
+      clearInterval(loopCronometro);
+      if(loopHeartbeat) clearInterval(loopHeartbeat);
+      marcarChaveComoExpirada(chaveAtualAutenticada);
+      alert("⚠️ Sua chave de acesso expirou!");
+      location.reload(); 
+      return; 
+    }
+    
+    if (expireTime >= now + 2000000000) {
+      document.getElementById('timeLeft').innerText = "PERMANENTE";
+      document.getElementById('timeLeft').style.color = "#10b981";
+      return;
+    }
+
+    let h = Math.floor(rem / 3600); 
+    let m = Math.floor((rem % 3600) / 60); 
+    let s = rem % 60;
+    
+    let hStr = h < 10 ? '0' + h : h;
+    let mStr = m < 10 ? '0' + m : m;
+    let sStr = s < 10 ? '0' + s : s;
+    
+    document.getElementById('timeLeft').innerText = `${hStr}:${mStr}:${sStr}`;
+  }
+
+  async function toggleOption(el, nome, msgAtivando, msgDesativando) {
+    if (!serverOnline) { showToast("⚠️ Servidor em manutenção geral"); return; }
+    
+    if (isProcessingOption) {
+      showToast("⚠️ Aguarde o processo atual!");
+      return;
+    }
+
+    isProcessingOption = true;
+
+    if (!el.classList.contains('active')) {
+      showToast('<div class="spinner"></div> ' + msgAtivando);
+      await new Promise(r => setTimeout(r, 2200));
+      
+      el.classList.add('active');
+      showToast(nome + " ativado com sucesso");
+    } else { 
+      showToast('<div class="spinner"></div> ' + msgDesativando);
+      await new Promise(r => setTimeout(r, 1800));
+
+      el.classList.remove('active'); 
+      showToast(nome + " removido com sucesso"); 
+    }
+
+    isProcessingOption = false;
+  }
+
+  async function injetarComEfeito() {
+    if (!serverOnline) { showToast("⚠️ Bloqueado: Servidor em manutenção"); return; }
+    if (isProcessingOption) { showToast("⚠️ Aguarde o processo em andamento!"); return; }
+
+    const todasOpcoes = document.querySelectorAll('#funcoes .opt-item');
+    const opcoesAtivas = document.querySelectorAll('#funcoes .opt-item.active');
+
+    if (opcoesAtivas.length < todasOpcoes.length) {
+      showToast("⚠️ Ative todas as opções antes de injetar!");
+      return;
+    }
+
+    isProcessingOption = true;
+    showToast('<div class="spinner"></div> Sincronizando tabelas offset...');
+    await new Promise(r => setTimeout(r, 2500));
+    
+    showToast('<div class="spinner"></div> Aplicando sub-rotinas no jogo...');
+    await new Promise(r => setTimeout(r, 2800));
+
+    showToast("INJETADO COM SUCESSO!");
+    isProcessingOption = false;
+    setTimeout(() => { window.location.href = "freefire://"; }, 1200);
+  }
+
+  function showToast(msg) {
+    const t = document.getElementById('status-toast');
+    if (toastTimeout) clearTimeout(toastTimeout);
+    t.innerHTML = msg; 
+    t.style.display = 'block';
+    toastTimeout = setTimeout(() => { t.style.display = 'none'; }, 2200);
+  }
+
+  function showTab(t) {
+    document.getElementById('funcoes').classList.toggle('active', t === 'funcoes');
+    document.getElementById('info').classList.toggle('active', t === 'info');
+    document.getElementById('btn-funcoes').classList.toggle('active', t === 'funcoes');
+    document.getElementById('btn-info').classList.toggle('active', t === 'info');
+  }
+
+  const canvas = document.getElementById('particles');
+  const ctx = canvas.getContext('2d');
+  let pts = [];
+  function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+  window.onresize = resize; resize();
+  for(let i=0; i<25; i++) pts.push({x:Math.random()*canvas.width, y:Math.random()*canvas.height, vx:(Math.random()-0.5)*0.4, vy:(Math.random()-0.5)*0.4});
+  function draw() {
+    ctx.clearRect(0,0,canvas.width,canvas.height); ctx.fillStyle = "rgba(255, 255, 255, 0.15)";
+    pts.forEach(p => {
+      p.x+=p.vx; p.y+=p.vy; if(p.x<0 || p.x>canvas.width) p.vx*=-1; if(p.y<0 || p.y>canvas.height) p.vy*=-1;
+      ctx.beginPath(); ctx.arc(p.x, p.y, 0.8, 0, Math.PI*2); ctx.fill();
+    });
+    requestAnimationFrame(draw);
+  }
+  draw();
+</script>
+</body>
+</html>
